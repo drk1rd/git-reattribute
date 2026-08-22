@@ -10,6 +10,18 @@ a `git-filter-repo` invocation. Also includes [`guard`](#guard-prevent-denied-id
 a prevention companion that blocks a denied identity in CI or a local hook
 *before* it ever lands, so you don't need to run the remediation flow again.
 
+**Contents:** [Why?](#why) · [Features](#features) ·
+[Installation](#installation) · [Quick Start](#quick-start) ·
+[Example](#example) · [Interactive Usage](#interactive-usage) ·
+[Non-Interactive Usage](#non-interactive-usage) · [Dry Run](#dry-run) ·
+[Branches](#branches) · [Authors vs Committers](#authors-vs-committers) ·
+[Co-authored-by Trailers](#co-authored-by-trailers) ·
+[History Rewriting Warning](#history-rewriting-warning) ·
+[Push Behavior](#push-behavior) · [Recovery](#recovery) ·
+[**`guard`: prevent denied identities**](#guard-prevent-denied-identities-before-they-land) ·
+[Limitations](#limitations) · [Development](#development) ·
+[License](#license)
+
 > **⚠️ This tool rewrites Git history.** Rewriting history changes commit
 > SHAs, invalidates existing signatures on rewritten commits, and requires a
 > force push to update any already-published branch. A force push can
@@ -258,16 +270,6 @@ Keep the backup ref until you've verified the rewritten history (and pushed,
 if applicable) — then it's safe to delete with
 `git update-ref -d refs/backup/git-reattribute/<timestamp>`.
 
-## Limitations
-
-- Shallow clones may show an incomplete contributor list and rewrite scope;
-  run `git fetch --unshallow` first.
-- Submodules, Git LFS objects, and annotated tag signatures are not
-  specially handled in v1.
-- Branch-protection or remote-policy push rejections are surfaced as-is;
-  this tool never attempts to bypass them.
-- One source identity → one target identity per run.
-
 ## `guard`: prevent denied identities before they land
 
 Everything above is remediation — fixing history that already has a bad
@@ -350,6 +352,16 @@ Fix with:
 Every violation names the exact `git-reattribute` command to fix it — the
 two halves of this tool are meant to be used together: `guard` stops it from
 happening again, `git-reattribute` cleans up what's already there.
+
+## Limitations
+
+- Shallow clones may show an incomplete contributor list and rewrite scope;
+  run `git fetch --unshallow` first.
+- Submodules, Git LFS objects, and annotated tag signatures are not
+  specially handled in v1.
+- Branch-protection or remote-policy push rejections are surfaced as-is;
+  this tool never attempts to bypass them.
+- One source identity → one target identity per run.
 
 ## Development
 
