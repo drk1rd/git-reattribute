@@ -92,6 +92,28 @@ def basic_repo(repo_factory) -> Path:
 
 
 @pytest.fixture
+def repo_with_root(repo_factory) -> Path:
+    """root -- A -- B -- C -- D, same commits as basic_repo but with a
+    leading root commit so HEAD~N ranges resolve cleanly (A has no parent
+    otherwise). Used by guard tests; kept separate from basic_repo so
+    existing tests' commit-index assumptions are untouched.
+    """
+    repo = repo_factory()
+    _commit(repo, "root", author=ALICE)
+    _commit(repo, "A: initial", author=CLAUDE)
+    _commit(repo, "B: alice work", author=ALICE)
+    _commit(repo, "C: bob work", author=BOB)
+    _commit(
+        repo,
+        "D: mixed roles",
+        author=CLAUDE,
+        committer=ALICE,
+        body=f"Co-authored-by: {CLAUDE[0]} <{CLAUDE[1]}>\nSigned-off-by: {ALICE[0]} <{ALICE[1]}>",
+    )
+    return repo
+
+
+@pytest.fixture
 def mailmap_repo(repo_factory) -> Path:
     repo = repo_factory()
     (repo / ".mailmap").write_text(f"{ALICE[0]} <{ALICE[1]}> <{CLAUDE[1]}>\n")

@@ -6,7 +6,9 @@
 
 A small, cross-platform CLI for replacing one Git identity with another
 across a repository's history, safely — without requiring you to hand-write
-a `git-filter-repo` invocation.
+a `git-filter-repo` invocation. Also includes [`guard`](#guard-prevent-denied-identities-before-they-land),
+a prevention companion that blocks a denied identity in CI or a local hook
+*before* it ever lands, so you don't need to run the remediation flow again.
 
 > **⚠️ This tool rewrites Git history.** Rewriting history changes commit
 > SHAs, invalidates existing signatures on rewritten commits, and requires a
@@ -36,6 +38,9 @@ command.
 - Mandatory post-rewrite verification.
 - `--force-with-lease` push only, never `--force`, never silent.
 - Warns about signed commits and shallow repositories before rewriting.
+- **`guard` subcommand**: prevent denied identities from ever being
+  committed or merged, via a GitHub Action and/or a local `pre-commit`
+  hook — see [`guard`](#guard-prevent-denied-identities-before-they-land).
 
 ## Requirements
 
@@ -262,6 +267,89 @@ if applicable) — then it's safe to delete with
 - Branch-protection or remote-policy push rejections are surfaced as-is;
   this tool never attempts to bypass them.
 - One source identity → one target identity per run.
+
+## `guard`: prevent denied identities before they land
+
+Everything above is remediation — fixing history that already has a bad
+identity in it. `git-reattribute guard` is the prevention half: it never
+touches history, it only scans and reports (exit `0` clean, exit `1` on a
+match), so it's safe to run unattended in a hook or CI job.
+
+Create `.git-reattribute-guard.yml` at your repo root:
+
+```yaml
+deny:
+  - name: Claude
+    email: claude@example.com
+  - email: "*@bots.example.com"   # glob supported on email only
+check_coauthors: true              # also check Co-authored-by trailers (default: true)
+```
+
+### CI (the actual enforcement point)
+
+```yaml
+name: Guard commit identities
+on: [pull_request]
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: drk1rd/git-reattribute/.github/actions/guard@v1
+```
+
+This runs `git-reattribute guard check` against every commit in the PR's
+range, server-side — regardless of what a contributor did locally. This is
+the layer that actually matters for keeping history clean.
+
+### Local hook (fast feedback, skippable)
+
+`git-reattribute guard check-local` checks the identity Git is about to use
+*right now* — your `user.name`/`user.email`, plus any `Co-authored-by:`
+trailer in the message you're writing. Wire it up via the `pre-commit`
+framework's `local` hook type (no separate hook-repo needed — it just runs
+the already-installed `git-reattribute` command):
+
+```yaml
+# .pre-commit-config.yaml
+repos:
+  - repo: local
+    hooks:
+      - id: git-reattribute-guard
+        name: git-reattribute-guard
+        entry: git-reattribute guard check-local
+        language: system
+        stages: [commit-msg]
+```
+
+```bash
+pre-commit install --hook-type commit-msg
+```
+
+This is a convenience for the person committing — it's skippable with `git
+commit --no-verify`, so it's not a substitute for the CI check above.
+
+### Direct CLI use
+
+```bash
+git-reattribute guard check --base origin/main --head HEAD
+```
+
+```text
+git-reattribute guard: found 1 violation(s) in origin/main..HEAD:
+
+  a1b2c3d4  author: Claude <claude@example.com>
+
+Fix with:
+  git-reattribute --branch main --from-email claude@example.com --to-current-user
+```
+
+Every violation names the exact `git-reattribute` command to fix it — the
+two halves of this tool are meant to be used together: `guard` stops it from
+happening again, `git-reattribute` cleans up what's already there.
 
 ## Development
 

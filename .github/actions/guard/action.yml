@@ -1,0 +1,45 @@
+name: "git-reattribute guard"
+description: "Fail a PR if any commit's author, committer, or Co-authored-by trailer matches a denylisted Git identity."
+branding:
+  icon: "shield"
+  color: "red"
+
+inputs:
+  config:
+    description: "Path to the guard config file."
+    required: false
+    default: ".git-reattribute-guard.yml"
+  version:
+    description: "git-reattribute version to install (pip version specifier, without the package name). Empty installs latest."
+    required: false
+    default: ""
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+
+    - name: Install git-reattribute
+      shell: bash
+      run: |
+        if [ -n "${{ inputs.version }}" ]; then
+          pip install "git-reattribute==${{ inputs.version }}"
+        else
+          pip install git-reattribute
+        fi
+
+    - name: Fetch base ref
+      shell: bash
+      run: git fetch --no-tags --depth=1 origin "${{ github.event.pull_request.base.sha }}"
+
+    - name: Check commit range for denied identities
+      shell: bash
+      run: |
+        git-reattribute guard check \
+          --base "${{ github.event.pull_request.base.sha }}" \
+          --head "${{ github.sha }}" \
+          --config "${{ inputs.config }}" \
+          --branch "${{ github.head_ref }}"

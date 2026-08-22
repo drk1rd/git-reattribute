@@ -11,6 +11,7 @@ from git_reattribute.branches import list_local_branches
 from git_reattribute.contributors import discover_contributors
 from git_reattribute.errors import GitReattributeError
 from git_reattribute.gitwrapper import check_git_version
+from git_reattribute.guard.cli import guard_app
 from git_reattribute.identities import current_git_identity, resolve_target_identity
 from git_reattribute.models import Identity, IdentityType, RewriteOptions
 from git_reattribute.push import push_with_lease
@@ -25,6 +26,7 @@ from git_reattribute.rewrite import RewriteEngine, has_signed_commits
 from git_reattribute.verify import verify_rewrite
 
 app = typer.Typer(add_completion=False, no_args_is_help=False)
+app.add_typer(guard_app, name="guard")
 
 
 def _version_callback(value: bool) -> None:
