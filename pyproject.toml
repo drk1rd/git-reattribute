@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "git-reattribute"
-version = "0.2.0"
+version = "0.3.0"
 description = "Replace one Git identity with another across a repository's history, safely — plus a `guard` subcommand to prevent denied identities before they land."
 readme = "README.md"
 license = { text = "MIT" }

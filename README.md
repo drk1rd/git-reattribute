@@ -277,7 +277,22 @@ identity in it. `git-reattribute guard` is the prevention half: it never
 touches history, it only scans and reports (exit `0` clean, exit `1` on a
 match), so it's safe to run unattended in a hook or CI job.
 
-Create `.git-reattribute-guard.yml` at your repo root:
+### Setup
+
+```bash
+git-reattribute guard init
+```
+
+Scaffolds everything in one shot: `.git-reattribute-guard.yml` (empty
+denylist template with commented examples, or pass `--deny-name`/
+`--deny-email` to populate a real entry immediately) and
+`.github/workflows/guard.yml` (wired to the Action below). It also prints
+the `pre-commit` snippet to paste in yourself — that one's never
+auto-written, since safely merging into an existing
+`.pre-commit-config.yaml` needs a human, not a blind overwrite. Existing
+files are left untouched unless you pass `--force`.
+
+Or write `.git-reattribute-guard.yml` by hand at your repo root:
 
 ```yaml
 deny:

@@ -122,3 +122,115 @@ def check_local(
         "Fix your git config or the Co-authored-by trailer before committing."
     )
     raise typer.Exit(code=1)
+
+
+_CONFIG_TEMPLATE_EMPTY = """\
+# git-reattribute-guard config
+# https://github.com/drk1rd/git-reattribute#guard-prevent-denied-identities-before-they-land
+#
+# Add identities to deny below, e.g.:
+#
+# deny:
+#   - name: Claude
+#     email: claude@example.com
+#   - email: "*@bots.example.com"   # glob supported on email only
+#
+deny: []
+check_coauthors: true
+"""
+
+_WORKFLOW_TEMPLATE = """\
+name: Guard commit identities
+on: [pull_request]
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: drk1rd/git-reattribute/.github/actions/guard@v1
+"""
+
+_PRE_COMMIT_SNIPPET = """\
+repos:
+  - repo: local
+    hooks:
+      - id: git-reattribute-guard
+        name: git-reattribute-guard
+        entry: git-reattribute guard check-local
+        language: system
+        stages: [commit-msg]"""
+
+_DEFAULT_WORKFLOW_PATH = Path(".github/workflows/guard.yml")
+
+
+def _config_template(deny_name: Optional[str], deny_email: Optional[str]) -> str:
+    if not deny_name and not deny_email:
+        return _CONFIG_TEMPLATE_EMPTY
+
+    entry_lines = ["deny:", "  -"]
+    if deny_name:
+        entry_lines.append(f"    name: {deny_name}")
+    if deny_email:
+        entry_lines.append(f"    email: {deny_email}")
+    entry = "\n".join(entry_lines)
+    return (
+        "# git-reattribute-guard config\n"
+        "# https://github.com/drk1rd/git-reattribute"
+        "#guard-prevent-denied-identities-before-they-land\n"
+        f"{entry}\n"
+        "check_coauthors: true\n"
+    )
+
+
+def _write_if_absent(path: Path, content: str, force: bool) -> tuple[bool, str]:
+    """Returns (written, message)."""
+    if path.exists() and not force:
+        return False, f"skipped (already exists): {path}"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(content)
+    return True, f"wrote: {path}"
+
+
+@guard_app.command()
+def init(
+    deny_name: Optional[str] = typer.Option(
+        None, "--deny-name", help="Name of an identity to deny immediately (with --deny-email)."
+    ),
+    deny_email: Optional[str] = typer.Option(
+        None, "--deny-email", help="Email of an identity to deny immediately."
+    ),
+    config_path: Path = typer.Option(
+        Path(DEFAULT_CONFIG_NAME), "--config", help="Where to write the guard config file."
+    ),
+    workflow_path: Path = typer.Option(
+        _DEFAULT_WORKFLOW_PATH, "--workflow-path", help="Where to write the GitHub Actions workflow."
+    ),
+    no_workflow: bool = typer.Option(
+        False, "--no-workflow", help="Skip writing the GitHub Actions workflow file."
+    ),
+    force: bool = typer.Option(
+        False, "--force", help="Overwrite files that already exist."
+    ),
+) -> None:
+    """Scaffold guard's config, GitHub Action workflow, and pre-commit snippet in one shot."""
+    written, message = _write_if_absent(
+        config_path, _config_template(deny_name, deny_email), force
+    )
+    typer.echo(message)
+
+    if not no_workflow:
+        written_wf, message_wf = _write_if_absent(workflow_path, _WORKFLOW_TEMPLATE, force)
+        typer.echo(message_wf)
+
+    typer.echo(
+        "\nTo also block a denied identity locally before it's committed, add this to "
+        ".pre-commit-config.yaml and run `pre-commit install --hook-type commit-msg`:\n"
+    )
+    typer.echo(_PRE_COMMIT_SNIPPET)
+    typer.echo(
+        "\n(Not written automatically — merging into an existing "
+        ".pre-commit-config.yaml safely needs a human, not a blind overwrite.)"
+    )

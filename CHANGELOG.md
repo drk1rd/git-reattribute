@@ -2,7 +2,19 @@
 
 All notable changes to this project are documented in this file.
 
-## [0.2.0] - Unreleased
+## [0.3.0] - Unreleased
+
+### Added
+
+- `git-reattribute guard init`: scaffolds `.git-reattribute-guard.yml` and
+  `.github/workflows/guard.yml` in one shot (`--deny-name`/`--deny-email` to
+  populate a real denylist entry immediately, `--no-workflow` to skip the
+  workflow file, `--force` to overwrite existing files). Prints the
+  `pre-commit` `local`-hook snippet to paste in by hand — not auto-written,
+  since safely merging into an existing `.pre-commit-config.yaml` needs a
+  human, not a blind overwrite.
+
+## [0.2.0] - 2026-08-22
 
 ### Added
 
