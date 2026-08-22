@@ -1,5 +1,9 @@
 # Git Reattribute
 
+[![CI](https://github.com/drk1rd/git-reattribute/actions/workflows/ci.yml/badge.svg)](https://github.com/drk1rd/git-reattribute/actions/workflows/ci.yml)
+[![PyPI](https://img.shields.io/pypi/v/git-reattribute.svg)](https://pypi.org/project/git-reattribute/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 A small, cross-platform CLI for replacing one Git identity with another
 across a repository's history, safely — without requiring you to hand-write
 a `git-filter-repo` invocation.
